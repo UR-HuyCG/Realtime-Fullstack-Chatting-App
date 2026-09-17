@@ -8,6 +8,13 @@ import Session from "../models/Session.js";
 const ACCESS_TOKEN_TTL = "30m"; // thuờng là dưới 15m
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000; // 14 ngày
 
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: REFRESH_TOKEN_TTL,
+};
+
 export const signUp = async (req, res) => {
   try {
     const { username, password, email, firstName, lastName } = req.body;
@@ -18,11 +25,14 @@ export const signUp = async (req, res) => {
       });
     }
 
-    // kiểm tra username tồn tại chưa
-    const duplicate = await User.findOne({ username });
+    // kiểm tra username hoặc email tồn tại chưa
+    const duplicate = await User.findOne({
+      $or: [{ username }, { email }],
+    });
 
     if (duplicate) {
-      return res.status(409).json({ message: "username đã tồn tại" });
+      const field = duplicate.username === username ? "username" : "email";
+      return res.status(409).json({ message: `${field} đã tồn tại` });
     }
 
     // mã hoá password
@@ -90,12 +100,7 @@ export const signIn = async (req, res) => {
     });
 
     // trả refresh token về trong cookie
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none", //backend, frontend deploy riêng
-      maxAge: REFRESH_TOKEN_TTL,
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
     // trả access token về trong res
     return res
@@ -117,7 +122,7 @@ export const signOut = async (req, res) => {
       await Session.deleteOne({ refreshToken: token });
 
       // xoá cookie
-      res.clearCookie("refreshToken");
+      res.clearCookie("refreshToken", refreshCookieOptions);
     }
 
     return res.sendStatus(204);

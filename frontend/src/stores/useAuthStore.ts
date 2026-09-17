@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { toast } from "sonner";
+import axios from "axios";
 import { authService } from "@/services/authService";
 import type { AuthState } from "@/types/store";
 
@@ -23,9 +24,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await authService.signUp(username, password, email, firstName, lastName);
 
       toast.success("Đăng ký thành công! Bạn sẽ được chuyển sang trang đăng nhập.");
+      return true;
     } catch (error) {
       console.error(error);
-      toast.error("Đăng ký không thành công");
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(message || "Đăng ký không thành công");
+      return false;
     } finally {
       set({ loading: false });
     }
@@ -40,10 +46,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       await get().fetchMe();
 
-      toast.success("Chào mừng bạn quay lại với RFCA 🎉");
+      if (!get().user) {
+        return false;
+      }
+
+      toast.success("Chào mừng bạn quay lại với Moji 🎉");
+      return true;
     } catch (error) {
       console.error(error);
-      toast.error("Đăng nhập không thành công!");
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(message || "Đăng nhập không thành công!");
+      return false;
     } finally {
       set({ loading: false });
     }
@@ -51,8 +66,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     try {
-      get().clearState();
       await authService.signOut();
+      get().clearState();
       toast.success("Logout thành công!");
     } catch (error) {
       console.error(error);
@@ -68,8 +83,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user });
     } catch (error) {
       console.error(error);
-      set({ user: null, accessToken: null });
-      toast.error("Lỗi xảy ra khi lấy dữ liệu người dùng. Hãy thử lại!");
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      if (status === 401 || status === 403) {
+        set({ user: null, accessToken: null });
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      } else {
+        toast.error("Lỗi xảy ra khi lấy dữ liệu người dùng. Hãy thử lại!");
+      }
     } finally {
       set({ loading: false });
     }

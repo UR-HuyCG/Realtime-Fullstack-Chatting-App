@@ -1,3 +1,7 @@
+// store trong Zustand hiểu đơn giản là “kho chứa dữ liệu dùng chung của ứng dụng”.
+
+//Trong project này, useAuthStore chính là kho chứa trạng thái liên quan đến đăng nhập.
+
 import type { User } from "./user";
 
 export interface AuthState {
@@ -13,8 +17,8 @@ export interface AuthState {
     email: string,
     firstName: string,
     lastName: string
-  ) => Promise<void>;
-  signIn: (username: string, password: string) => Promise<void>;
+  ) => Promise<boolean>;
+  signIn: (username: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   fetchMe: () => Promise<void>;
   refresh: () => Promise<void>;

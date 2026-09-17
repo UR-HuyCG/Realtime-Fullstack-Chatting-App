@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "../ui/label";
-import { useAuthStore } from "@/stores/useAuthStore.ts";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router";
 
 const signInSchema = z.object({
@@ -29,8 +29,10 @@ export function SigninForm({ className, ...props }: React.ComponentProps<"div">)
 
   const onSubmit = async (data: SignInFormValues) => {
     const { username, password } = data;
-    await signIn(username, password);
-    navigate("/");
+    const success = await signIn(username, password);
+    if (success) {
+      navigate("/");
+    }
   };
 
   return (
